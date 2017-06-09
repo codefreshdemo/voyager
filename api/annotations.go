@@ -2,9 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"net"
 	"strconv"
 	"strings"
-	"net"
 )
 
 const (
@@ -39,7 +39,7 @@ const (
 	Replicas = EngressKey + "/" + "replicas"
 
 	// IP to be assigned to cloud load balancer
-	LoadBalancerIP = EngressKey + "/" + "ip" // IP or empty
+	LoadBalancerIP = EngressKey + "/" + "load-balancer-ip" // IP or empty
 
 	// BackendWeight is the weight value of a Pod that was
 	// addressed by the Endpoint, this weight will be added to server backend.

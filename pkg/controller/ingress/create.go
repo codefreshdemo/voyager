@@ -1,7 +1,6 @@
 package ingress
 
 import (
-	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -473,7 +472,7 @@ func (lbc *EngressController) createLoadBalancerSvc() error {
 			},
 		},
 		Spec: kapi.ServiceSpec{
-			Type : kapi.ServiceTypeLoadBalancer,
+			Type:                     kapi.ServiceTypeLoadBalancer,
 			Ports:                    []kapi.ServicePort{},
 			Selector:                 labelsFor(lbc.Resource.Name),
 			LoadBalancerSourceRanges: lbc.Resource.Spec.LoadBalancerSourceRanges,
@@ -504,59 +503,8 @@ func (lbc *EngressController) createLoadBalancerSvc() error {
 		}
 	}
 
-	svc, err := lbc.KubeClient.Core().Services(lbc.Resource.Namespace).Create(svc)
-	if err != nil {
-		return errors.FromErr(err).Err()
-	}
-
-	if svc.Spec.Type == kapi.ServiceTypeNodePort && lbc.CloudManager != nil {
-		if lb, ok := lbc.CloudManager.LoadBalancer(); ok {
-			// Wait for nodePort to be assigned
-			timeoutAt := time.Now().Add(time.Second * 600)
-			for {
-				svc, err := lbc.KubeClient.Core().Services(lbc.Resource.Namespace).Get(lbc.Resource.OffshootName())
-				if err != nil {
-					return errors.FromErr(err).Err()
-				}
-
-				nodePortReady := true
-				for _, p := range svc.Spec.Ports {
-					if p.NodePort <= 0 {
-						nodePortReady = false
-						break
-					}
-				}
-				if nodePortReady {
-					break
-				}
-
-				if time.Now().After(timeoutAt) {
-					return errors.New("timed out creating node port service").Err()
-				}
-
-				log.Info("Waiting for nodeport service to be ready")
-
-				time.Sleep(10 * time.Second)
-			}
-
-			hosts := make([]string, 0)
-			if ins, ok := lbc.CloudManager.Instances(); ok {
-				// TODO(tamal): Does it return all hosts?
-				nodes, _ := ins.List("")
-				for _, node := range nodes {
-					hosts = append(hosts, string(node))
-				}
-			}
-			log.Debugln("loadbalancer for cloud manager updating")
-			convertedSvc := &kapi.Service{}
-			kapi.Scheme.Convert(svc, convertedSvc, nil)
-			_, err = lb.EnsureLoadBalancer(lbc.ClusterName, convertedSvc, hosts) // lbc.Config.Annotations
-			if err != nil {
-				return errors.FromErr(err).Err()
-			}
-		}
-	}
-	return nil
+	_, err := lbc.KubeClient.Core().Services(lbc.Resource.Namespace).Create(svc)
+	return err
 }
 
 func (lbc *EngressController) ensureStatsService() {
