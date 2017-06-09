@@ -473,6 +473,7 @@ func (lbc *EngressController) createLoadBalancerSvc() error {
 			},
 		},
 		Spec: kapi.ServiceSpec{
+			Type : kapi.ServiceTypeLoadBalancer,
 			Ports:                    []kapi.ServicePort{},
 			Selector:                 labelsFor(lbc.Resource.Name),
 			LoadBalancerSourceRanges: lbc.Resource.Spec.LoadBalancerSourceRanges,
@@ -498,20 +499,9 @@ func (lbc *EngressController) createLoadBalancerSvc() error {
 
 	switch lbc.ProviderName {
 	case "gce", "gke":
-		svc.Spec.Type = kapi.ServiceTypeLoadBalancer
-		if ip := net.ParseIP(lbc.Resource.Persist()); ip != nil {
+		if ip := lbc.Resource.LoadBalancerIP(); ip != nil {
 			svc.Spec.LoadBalancerIP = ip.String()
 		}
-	case "aws":
-		persist, _ := strconv.ParseBool(lbc.Resource.Persist())
-		if persist {
-			// We are going manage the loadbalancer directly
-			svc.Spec.Type = kapi.ServiceTypeNodePort
-		} else {
-			svc.Spec.Type = kapi.ServiceTypeLoadBalancer
-		}
-	case "minikube":
-		svc.Spec.Type = kapi.ServiceTypeLoadBalancer
 	}
 
 	svc, err := lbc.KubeClient.Core().Services(lbc.Resource.Namespace).Create(svc)
